@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>90s Wall Street AR Business Card</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&family=Source+Code+Pro&display=swap" rel="stylesheet">
+    <style>
+        * {
+            touch-action: none;
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Roboto Condensed', 'Source Code Pro', sans-serif;
+            background: #1a1a1a;
+            color: #d4af37;
+        }
+
+        /* Camera Background with Sepia Tone */
+        #camera-video {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            z-index: 0;
+            filter: sepia(20%) brightness(90%) contrast(110%);
+        }
+
+        /* AR Overlay with Subtle Grain */
+        .ar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAAXNSR0IArs4c6QAAABBJREFUCB1jZGBgYGZgYGBiAAAAFAAF7S3rtgAAAABJRU5ErkJggg==') repeat;
+            opacity: 0.15;
+        }
+
+        /* Stock Ticker Grid */
+        .ar-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(212, 175, 55, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(212, 175, 55, 0.1) 1px, transparent 1px);
+            background-size: 15px 15px;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        /* 3D Card Container */
+        #card-container {
+            position: fixed;
+            width: 300px;
+            height: 180px;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%) perspective(1000px);
+            transform-style: preserve-3d;
+            z-index: 5;
+        }
+
+        .rotating-card {
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+            transition: transform 0.2s ease;
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+            background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 100%);
+            border: 2px solid #d4af37;
+        }
+
+        .card-front {
+            transform: rotateY(0deg);
+        }
+
+        .card-back {
+            transform: rotateY(180deg);
+        }
+
+        .card-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.3));
+        }
+
+        /* Gold Accent Effect */
+        .card-face::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(212, 175, 55, 0.2),
+                transparent
+            );
+            animation: ticker-scroll 3s linear infinite;
+        }
+
+        @keyframes ticker-scroll {
+            0% { background-position: -100%; }
+            100% { background-position: 200%; }
+        }
+
+        /* Profile Section */
+        .profile-card {
+            position: fixed;
+            top: 4vh;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 1.5rem;
+            border-radius: 8px;
+            max-width: 90%;
+            border: 2px solid #d4af37;
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+        }
+
+        .profile-image-container {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 1rem;
+        }
+
+        .profile-image {
+            width: 90px;
+            height: 90px;
+            border-radius: 6px;
+            border: 2px solid #d4af37;
+            object-fit: cover;
+            display: block;
+            margin: 0 auto;
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
+        }
+
+        .profile-image-container::before {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            width: 100px;
+            height: 100px;
+            border: 2px solid #8b0000;
+            animation: pulse-border 2s infinite;
+        }
+
+        @keyframes pulse-border {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+
+        .profile-card h2 {
+            font-family: 'Roboto Condensed';
+            font-size: 1.5rem;
+            margin: 0.3rem 0;
+            color: #fff;
+            text-shadow: 0 0 8px #d4af37;
+        }
+
+        .profile-card p {
+            font-family: 'Source Code Pro';
+            font-size: 1rem;
+            margin: 0.2rem 0;
+            color: #d4af37;
+        }
+
+        /* Social Buttons */
+        .social-container {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 15;
+        }
+
+        .social-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid #d4af37;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(45deg, #2c2c2c, #1a1a1a);
+        }
+
+        .social-btn::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                45deg,
+                transparent,
+                rgba(212, 175, 55, 0.2),
+                transparent
+            );
+            animation: btn-glow 2s linear infinite;
+        }
+
+        @keyframes btn-glow {
+            0% { transform: translateX(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) rotate(45deg); }
+        }
+
+        .map {
+            background: linear-gradient(45deg, #8b0000, #2c2c2c);
+        }
+
+        .twitter {
+            background: linear-gradient(45deg, #2c2c2c, #d4af37);
+        }
+
+        .linkedin {
+            background: linear-gradient(45deg, #d4af37, #8b0000);
+        }
+
+        .social-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
+        }
+
+        .social-btn i {
+            font-size: 1.8rem;
+            color: #fff;
+            text-shadow: 0 0 5px #d4af37;
+        }
+
+        /* Loading Screen */
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #d4af37;
+        }
+
+        .loading-text {
+            font-family: 'Source Code Pro';
+            font-size: 2rem;
+            text-shadow: 0 0 10px #d4af37;
+            animation: flicker 1.5s infinite;
+        }
+
+        @keyframes flicker {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        .loading-bar {
+            width: 200px;
+            height: 6px;
+            background: rgba(212, 175, 55, 0.2);
+            margin-top: 20px;
+            border: 2px solid #d4af37;
+            position: relative;
+        }
+
+        .loading-progress {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 0%;
+            background: #d4af37;
+            box-shadow: 0 0 10px #d4af37;
+            animation: loading 2s ease-in-out forwards;
+        }
+
+        @keyframes loading {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+
+        /* HUD Elements */
+        .hud-element {
+            position: fixed;
+            font-family: 'Source Code Pro';
+            font-size: 0.8rem;
+            color: #d4af37;
+            text-shadow: 0 0 5px #d4af37;
+            z-index: 3;
+            pointer-events: none;
+        }
+
+        .hud-top-left { top: 15px; left: 15px; }
+        .hud-top-right { top: 15px; right: 15px; text-align: right; }
+        .hud-bottom-left { bottom: 15px; left: 15px; }
+        .hud-bottom-right { bottom: 15px; right: 15px; text-align: right; }
+
+        /* Stock Ticker Effect */
+        .ticker-line {
+            position: fixed;
+            bottom: 60px;
+            left: 0;
+            width: 100%;
+            height: 20px;
+            background: #000;
+            z-index: 3;
+            overflow: hidden;
+            border-top: 1px solid #d4af37;
+            border-bottom: 1px solid #d4af37;
+        }
+
+        .ticker-text {
+            font-family: 'Source Code Pro';
+            font-size: 0.9rem;
+            color: #d4af37;
+            white-space: nowrap;
+            animation: ticker-move 15s linear infinite;
+        }
+
+        @keyframes ticker-move {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 768px) {
+            .profile-card {
+                top: 3vh;
+                padding: 1rem;
+            }
+
+            .profile-image-container {
+                width: 80px;
+                height: 80px;
+            }
+
+            .profile-image {
+                width: 70px;
+                height: 70px;
+            }
+
+            .profile-card h2 {
+                font-size: 1.2rem;
+            }
+
+            .social-btn {
+                width: 50px;
+                height: 50px;
+            }
+
+            .social-btn i {
+                font-size: 1.5rem;
+            }
+
+            #card-container {
+                width: 80vw;
+                height: 48vw;
+            }
+        }
+
+        @media (orientation: portrait) and (max-width: 768px) {
+            .social-container {
+                bottom: 80px;
+            }
+
+            .ticker-line {
+                bottom: 120px;
+            }
+        }
+
+        @media (orientation: landscape) {
+            #card-container {
+                width: 300px;
+                height: 180px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Camera Background -->
+    <video id="camera-video" autoplay muted playsinline></video>
+
+    <!-- AR Overlay Effects -->
+    <div class="ar-overlay"></div>
+    <div class="ar-grid"></div>
+
+    <!-- HUD Elements -->
+    <div class="hud-element hud-top-left">
+        <div id="date-time">--:--:-- | --/--/----</div>
+        <div>STATUS: <span id="status-text">INITIALIZING</span></div>
+    </div>
+    <div class="hud-element hud-top-right">
+        <div>AR SYSTEM: ACTIVE</div>
+        <div>MARKET: <span id="market-status">BULL</span></div>
+    </div>
+    <div class="hud-element hud-bottom-left">
+        <div>LAT: <span id="latitude">--.---------</span></div>
+        <div>LNG: <span id="longitude">--.---------</span></div>
+    </div>
+    <div class="hud-element hud-bottom-right">
+        <div>NETWORK: <span id="network-status">CONNECTED</span></div>
+        <div>PORTFOLIO: <span id="portfolio-value">$---,---</span></div>
+    </div>
+
+    <!-- Stock Ticker -->
+    <div class="ticker-line">
+        <div class="ticker-text">
+            VPI +2.3% | INDUSTRY INDEX +1.5% | MARKET VOLATILITY LOW | VPI +2.3% | INDUSTRY INDEX +1.5% | MARKET VOLATILITY LOW
+        </div>
+    </div>
+
+    <!-- Loading Screen -->
+    <div class="loading">
+        <div class="loading-text">LOADING EXECUTIVE PROFILE</div>
+        <div class="loading-bar">
+            <div class="loading-progress"></div>
+        </div>
+    </div>
+
+    <!-- Profile Section -->
+    <div class="profile-card">
+        <div class="profile-image-container">
+            <img src="https://via.placeholder.com/90?text=Executive+Profile" class="profile-image" alt="Profile">
+        </div>
+        <h2>Sanjeev Kumar</h2>
+        <p>Verdhman Pipe Industry</p>
+        <p><i class="fas fa-phone-alt"></i> +91 98XXXXXXXX</p>
+    </div>
+
+    <!-- Social Links -->
+    <div class="social-container">
+        <a href="https://www.google.com/maps/place/Verdhman+Pipe+Industry" class="social-btn map">
+            <i class="fas fa-map-marker-alt"></i>
+        </a>
+        <a href="https://twitter.com/" class="social-btn twitter">
+            <i class="fab fa-twitter"></i>
+        </a>
+        <a href="https://linkedin.com/" class="social-btn linkedin">
+            <i class="fab fa-linkedin-in"></i>
+        </a>
+    </div>
+
+    <!-- 3D Business Card -->
+    <div id="card-container">
+        <div class="rotating-card">
+            <div class="card-face card-front">
+                <img src="https://via.placeholder.com/300x180?text=VPI+Logo" alt="Business Logo" class="card-image">
+            </div>
+            <div class="card-face card-back">
+                <img src="https://via.placeholder.com/300x180?text=Contact+Info" alt="Business Info" class="card-image">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Card Rotation
+        const cardContainer = document.getElementById('card-container');
+        const rotatingCard = document.querySelector('.rotating-card');
+
+        cardContainer.addEventListener('mousemove', (e) => {
+            const rect = cardContainer.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            const rotateX = (centerY - y) / centerY * 15;
+            const rotateY = (x - centerX) / centerX * 15;
+
+            rotatingCard.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+        });
+
+        cardContainer.addEventListener('mouseleave', () => {
+            rotatingCard.style.transform = 'rotateX(0deg) rotateY(0deg)';
+        });
+
+        // Update HUD
+        function updateHUD() {
+            const now = new Date();
+            document.getElementById('date-time').textContent =
+                `${now.toLocaleTimeString()} | ${now.toLocaleDateString()}`;
+            document.getElementById('status-text').textContent = 'OPERATIONAL';
+            document.getElementById('market-status').textContent = 'BULL';
+            document.getElementById('latitude').textContent = '29.8583547';
+            document.getElementById('longitude').textContent = '75.7859645';
+            document.getElementById('network-status').textContent = 'CONNECTED';
+            document.getElementById('portfolio-value').textContent = '$1,234,567';
+        }
+
+        setInterval(updateHUD, 1000);
+
+        // Hide Loading Screen
+        window.onload = () => {
+            setTimeout(() => {
+                document.querySelector('.loading').style.display = 'none';
+                document.getElementById('camera-video').play();
+                updateHUD();
+            }, 2000);
+        };
+
+        // Request Camera Access
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+            .then(stream => {
+                document.getElementById('camera-video').srcObject = stream;
+            })
+            .catch(err => {
+                console.error('Camera access denied:', err);
+            });
+    </script>
+</body>
+</html>
